@@ -321,7 +321,7 @@ static id<SDImageLoader> _defaultImageLoader;
                 }
             } else {
                 // Write back the disk image into memory cache, with the correct key
-                if (cacheType == SDImageCacheTypeDisk) {
+                if (cacheType == SDImageCacheTypeDisk && [self shouldWriteBackToMemoryCacheWithContext:context storeCacheTypeKey:SDWebImageContextStoreCacheType]) {
                     // Sync
                     [imageCache storeImage:cachedImage imageData:nil forKey:key cacheType:SDImageCacheTypeMemory completion:nil];
                 }
@@ -379,7 +379,7 @@ static id<SDImageLoader> _defaultImageLoader;
                 return;
             } else {
                 // Write back the disk image into memory cache, with the correct key
-                if (cacheType == SDImageCacheTypeDisk) {
+                if (cacheType == SDImageCacheTypeDisk && [self shouldWriteBackToMemoryCacheWithContext:context storeCacheTypeKey:SDWebImageContextOriginalStoreCacheType]) {
                     // Sync
                     [imageCache storeImage:cachedImage imageData:nil forKey:key cacheType:SDImageCacheTypeMemory completion:nil];
                 }
@@ -644,6 +644,18 @@ static id<SDImageLoader> _defaultImageLoader;
 }
 
 #pragma mark - Helper
+
+// Respect the store cache type from context: when the caller asked for a disk-only (or no)
+// store policy, an image loaded from disk must not be written back into the memory cache.
+// Falls back to `SDWebImageContextStoreCacheType` when the original-specific key is absent.
+- (BOOL)shouldWriteBackToMemoryCacheWithContext:(nullable SDWebImageContext *)context storeCacheTypeKey:(nonnull SDWebImageContextOption)storeCacheTypeKey {
+    NSNumber *storeCacheTypeValue = context[storeCacheTypeKey] ?: context[SDWebImageContextStoreCacheType];
+    if (!storeCacheTypeValue) {
+        return YES;
+    }
+    SDImageCacheType storeCacheType = [storeCacheTypeValue integerValue];
+    return storeCacheType == SDImageCacheTypeAll || storeCacheType == SDImageCacheTypeMemory;
+}
 
 - (void)safelyRemoveOperationFromRunning:(nullable SDWebImageCombinedOperation*)operation {
     if (!operation) {
